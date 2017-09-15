@@ -1,2 +1,5 @@
 # Eclipse generated resources
 .project
+
+# Mac generated files
+.DS_Store
