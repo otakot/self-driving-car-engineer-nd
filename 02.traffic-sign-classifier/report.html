@@ -16688,17 +16688,17 @@ pOHGWCDqBUMAAAAASUVORK5CYII=
 </div>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Model-Architecture">Model Architecture<a class="anchor-link" href="#Model-Architecture">&#182;</a></h3><p>The LeNet architecture accepts a 32x32xC image as input, where C is the number of color channels. Since Traffic Sign images arein RGB color, C is 3 in this case.</p>
+<h1 id="Model-Architecture">Model Architecture<a class="anchor-link" href="#Model-Architecture">&#182;</a></h1><p>The LeNet architecture accepts a 32x32xC image as input, where C is the number of color channels. Since Traffic Sign images arein RGB color, C is 1 in this case since we converted images from color (3 channels) to greyscale (1 channel)</p>
 <p>Model Architecture:</p>
 <p>Model Architecture:
-Layer 1: Convolutional. The output shape should be 28x28x6. Activation: Relu.
-Layer 2: Pooling: The output shape is 14x14x6.
-Layer 3: Convolutional. The output shape is 10x10x16. Activation: Relu.
-Layer 4: Pooling: The output shape is 5x5x16.
-Layer 5: Flatten: Input shape: 5x5x16. Output shape: 400x1. 
-Layer 6: Fully Connected. Inputs: 400. Outputs: 120. Activation: Relu. Dropout: 25%
-Layer 7: Fully Connected. Inputs: 120. Outputs: 84.  Activation: Relu. Dropout: 25%
-Layer 8: Fully Connected. Inputs: 84. Outputs: 43.</p>
+Layer 1: Convolutional. The output shape should be 28x28x6. Activation: Relu<br>
+Layer 2: Pooling: The output shape is 14x14x6<br>
+Layer 3: Convolutional. The output shape is 10x10x16. Activation: Relu<br>
+Layer 4: Pooling: The output shape is 5x5x16<br>
+Layer 5: Flatten: Input shape: 5x5x16. Output shape: 400x1<br>
+Layer 6: Fully Connected. Inputs: 400. Outputs: 120. Activation: Relu. Dropout: 25%<br>
+Layer 7: Fully Connected. Inputs: 120. Outputs: 84.  Activation: Relu. Dropout: 25%<br>
+Layer 8: Fully Connected. Inputs: 84. Outputs: 43</p>
 
 </div>
 </div>
@@ -16749,6 +16749,7 @@ Layer 8: Fully Connected. Inputs: 84. Outputs: 43.</p>
     <span class="c1"># Activation.</span>
     <span class="n">fc1</span>    <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">fc1</span><span class="p">)</span>
     
+    <span class="c1"># Dropout</span>
     <span class="n">fc1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">dropout</span><span class="p">(</span><span class="n">fc1</span><span class="p">,</span> <span class="n">keep_prob</span><span class="p">)</span>
 
     <span class="c1"># Layer 7: Fully Connected. Input = 400. Output = 120.</span>
@@ -24944,19 +24945,6 @@ Top 5 predictions for image in file &#39;14_stop.jpg&#39;:
 </div>
 </div>
 
-</div>
-</div>
-
-</div>
-<div class="cell border-box-sizing code_cell rendered">
-<div class="input">
-<div class="prompt input_prompt">In&nbsp;[&nbsp;]:</div>
-<div class="inner_cell">
-    <div class="input_area">
-<div class=" highlight hl-ipython3"><pre><span></span> 
-</pre></div>
-
-</div>
 </div>
 </div>
 
