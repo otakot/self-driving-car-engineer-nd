@@ -26,7 +26,7 @@ Once the install for uWebSocketIO is complete, the main program can be built and
 
 ## Execution instructions
 
-1. Start built extended kalman filter executable from build folder:
+1. Start created unscented kalman filter executable from build folder:
   
    ./UnscentedKF
    
