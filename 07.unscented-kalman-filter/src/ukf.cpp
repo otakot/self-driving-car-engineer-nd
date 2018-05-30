@@ -122,11 +122,11 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       weights_(0) = lambda_ / (lambda_ + n_aug_);
 
       // Initialize covariance matrix
-      P_ << 1, 0,   0, 0, 0,
-            0,   1, 0, 0, 0,
-            0,   0,   1, 0, 0,
-            0,   0,   0, 1, 0,
-            0,   0,   0, 0, 1;
+      P_ << 1, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 1, 0,
+            0, 0, 0, 0, 1;
 
       // Initialize measurement noise covariance matrices for radar and lidar
       R_radar_ << std_radr_ * std_radr_,   0,                         0,
