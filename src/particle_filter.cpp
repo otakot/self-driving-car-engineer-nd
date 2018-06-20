@@ -30,23 +30,22 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 
   num_particles_ = TOTAL_PARTICLES;
 
-  default_random_engine gen;
-
   // emulate noisy GPS position
-  normal_distribution<double> particle_x(x, std[0]);
-  normal_distribution<double> particle_y(y, std[1]);
-  normal_distribution<double> particle_theta(theta, std[2]);
+  normal_distribution<double> norm_dist_x(x, std[0]);
+  normal_distribution<double> norm_dist_y(y, std[1]);
+  normal_distribution<double> norm_dist_theta(theta, std[2]);
 
+  default_random_engine gen;
   for (int i = 0; i < TOTAL_PARTICLES; ++i) {
+    // add particle weight with default value
+    weights_.push_back(DEFAULT_WEIGHT);
 
     // create particle from "noisy" GPS data with initial weight
-    Particle particle = {i, particle_x(gen), particle_y(gen), particle_theta(gen), DEFAULT_WEIGHT};
-
-    weights_.push_back(DEFAULT_WEIGHT);
+    Particle particle = {i, norm_dist_x(gen), norm_dist_y(gen), norm_dist_theta(gen), DEFAULT_WEIGHT};
     particles_.push_back(particle);
   }
 
-  this->is_initialized_ = true;
+  is_initialized_ = true;
 }
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
@@ -63,16 +62,17 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     double predicted_y;
     double predicted_theta;
 
-    const double delta_theta = yaw_rate * delta_t;
-
     // check for straight line movement
     if (fabs(yaw_rate) < EPSILON) {
-      predicted_x = particle_x + velocity * delta_t * cos(particle_theta);
-      predicted_y = particle_y + velocity * delta_t * sin(particle_theta);
+      const double odometry = velocity * delta_t;
+      predicted_x = particle_x + odometry * cos(particle_theta);
+      predicted_y = particle_y + odometry * sin(particle_theta);
       predicted_theta = particle_theta;
     } else {
-      predicted_x = particle_x + (velocity / yaw_rate) * (sin(particle_theta + delta_theta) - sin(particle_theta));
-      predicted_y = particle_y + (velocity / yaw_rate) * (cos(particle_theta) - cos(particle_theta + delta_theta));
+      const double delta_theta = yaw_rate * delta_t;
+      const double velocity_div_yaw_rate = velocity / yaw_rate;
+      predicted_x = particle_x + velocity_div_yaw_rate * (sin(particle_theta + delta_theta) - sin(particle_theta));
+      predicted_y = particle_y + velocity_div_yaw_rate * (cos(particle_theta) - cos(particle_theta + delta_theta));
       predicted_theta = particle_theta + delta_theta;
     }
 
@@ -84,18 +84,16 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
     particles_[i].y = norm_dist_y(gen);
     particles_[i].theta = norm_dist_theta(gen);
   }
-
-
 }
 
 void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted_landmarks,
                                      std::vector<LandmarkObs>& observations) {
   // Find the predicted measurement that is closest to each observed measurement and assign the
-  //   observed measurement to this particular landmark.
+  // observed measurement to this particular landmark.
 
   for(LandmarkObs& observation : observations){
 
-    // set unrealistic initial values
+    // set initial values
     double min_distance = numeric_limits<double>::max();
     int closest_landmark_id = -1;
 
@@ -110,72 +108,69 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted_landmark
     }
     observation.id = closest_landmark_id;
   }
-
 }
 
-void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
-		const std::vector<LandmarkObs> &observations, const Map &map_landmarks) {
+void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
+                                   const std::vector<LandmarkObs> &observations,
+                                   const Map &map_landmarks) {
 
-	// Update the weights of each particle using a mult-variate Gaussian distribution.
-  for(Particle& particle : particles_){
+  // Update the weights of each particle using a mult-variate Gaussian distribution.
+  for (Particle& particle : particles_) {
 
-      // 1. select only landmarks within car's sensor range from the particle
-      vector<LandmarkObs> predicted_landmarks;
-      for(const Map::single_landmark_s& landmark : map_landmarks.landmark_list){
+    // 1. select only landmarks within car's sensor range from the particle
+    vector<LandmarkObs> predicted_landmarks;
+    for (const Map::single_landmark_s& landmark : map_landmarks.landmark_list) {
 
-        // calculate distance from particle to landmark
-        double distance_to_landmark = dist(particle.x, particle.y, landmark.x_f, landmark.y_f);
+      // calculate distance from particle to landmark
+      double distance_to_landmark = dist(particle.x, particle.y, landmark.x_f, landmark.y_f);
 
-        if(distance_to_landmark < sensor_range) {
-          predicted_landmarks.push_back(LandmarkObs{landmark.id_i, landmark.x_f, landmark.y_f});
-        }
+      if (distance_to_landmark < sensor_range) {
+        predicted_landmarks.push_back(LandmarkObs { landmark.id_i, landmark.x_f, landmark.y_f });
       }
+    }
 
-      // 2. translate observations coordinates from vehicle to map coordinate system
-      vector<LandmarkObs> translated_observations;
+    // 2. translate observations coordinates from vehicle to map coordinate system
+    vector<LandmarkObs> translated_observations;
 
-      const double sin_theta = sin(particle.theta);
-      const double cos_theta = cos(particle.theta);
+    const double sin_theta = sin(particle.theta);
+    const double cos_theta = cos(particle.theta);
 
-      for(const LandmarkObs& observation : observations){
-        LandmarkObs translated_observation;
-        translated_observation.id = observation.id;
-        translated_observation.x = particle.x + observation.x * cos_theta - observation.y * sin_theta;
-        translated_observation.y = particle.y + observation.x * sin_theta + observation.y * cos_theta;
-        translated_observations.push_back(translated_observation);
-      }
+    for (const LandmarkObs& observation : observations) {
+      LandmarkObs translated_observation;
+      translated_observation.id = observation.id;
+      translated_observation.x = particle.x + observation.x * cos_theta - observation.y * sin_theta;
+      translated_observation.y = particle.y + observation.x * sin_theta + observation.y * cos_theta;
+      translated_observations.push_back(translated_observation);
+    }
 
-      // 3. identify the closest landmark for every observation
-      dataAssociation(predicted_landmarks, translated_observations);
+    // 3. identify the closest landmark for every observation
+    dataAssociation(predicted_landmarks, translated_observations);
 
-      // 4. calculate the weight of particle using Multivariate Gaussian distribution.*/
-      particle.weight = 1.0; // initial value of weight
+    // 4. calculate the weight of particle using Multivariate Gaussian distribution.*/
 
-      const double sigma_x = std_landmark[0];
-      const double sigma_y = std_landmark[1];
-      const double gaussian_normalizer = 1/(2 * M_PI * sigma_x * sigma_y);
+    const double sigma_x = std_landmark[0];
+    const double sigma_y = std_landmark[1];
+    const double gaussian_normalizer = 1 / (2 * M_PI * sigma_x * sigma_y);
 
-      const double double_sigma_x_2 = pow(sigma_x, 2) * 2;
-      const double double_sigma_y_2 = pow(sigma_y, 2) * 2;
+    const double double_sigma_x_2 = pow(sigma_x, 2) * 2;
+    const double double_sigma_y_2 = pow(sigma_y, 2) * 2;
 
+    particle.weight = 1.0;  // initial value of weight
+    for (const LandmarkObs& observation : translated_observations) {
 
-      for(const LandmarkObs& observation : translated_observations){
+      // since landmark ids in a map_data.txt file are sorted and start from 1
+      // find the landmark in a sorted map landmark IDs array with same id as observation has
+      Map::single_landmark_s landmark = map_landmarks.landmark_list[observation.id - 1];
 
-        // since landmark ids in a map_data.txt file are sorted and start from 1
-        // find the landmark on a map with same id as observation has
-        Map::single_landmark_s landmark = map_landmarks.landmark_list[observation.id]; // id -1 ?
+      // multivariate Gaussian distribution method
+      double exp_x = pow((observation.x - landmark.x_f), 2) / double_sigma_x_2;
+      double exp_y = pow((observation.y - landmark.y_f), 2) / double_sigma_y_2;
+      double weight = gaussian_normalizer * exp(-(exp_x + exp_y));
 
-        // multivariate Gaussian distribution method
-        double exp_x = pow((observation.x - landmark.x_f), 2) / double_sigma_x_2;
-        double exp_y = pow((observation.y - landmark.y_f), 2) / double_sigma_y_2;
-        double weight = gaussian_normalizer * exp(-(exp_x + exp_y));
+      particle.weight *= weight;
+    }
 
-        particle.weight *=  weight;
-      }
-
-      // TODO: normalize weights?
-
-      weights_.push_back(particle.weight);
+    weights_.push_back(particle.weight);
   }
 }
 
@@ -199,43 +194,41 @@ void ParticleFilter::resample() {
   weights_.clear();
 }
 
-Particle ParticleFilter::SetAssociations(Particle& particle, const std::vector<int>& associations, 
-                                     const std::vector<double>& sense_x, const std::vector<double>& sense_y)
-{
-    //particle: the particle to assign each listed association, and association's (x,y) world coordinates mapping to
-    // associations: The landmark id that goes along with each listed association
-    // sense_x: the associations x mapping already converted to world coordinates
-    // sense_y: the associations y mapping already converted to world coordinates
+Particle ParticleFilter::SetAssociations(Particle& particle,
+                                         const std::vector<int>& associations,
+                                         const std::vector<double>& sense_x,
+                                         const std::vector<double>& sense_y) {
+  //particle: the particle to assign each listed association, and association's (x,y) world coordinates mapping to
+  // associations: The landmark id that goes along with each listed association
+  // sense_x: the associations x mapping already converted to world coordinates
+  // sense_y: the associations y mapping already converted to world coordinates
 
-    particle.associations= associations;
-    particle.sense_x = sense_x;
-    particle.sense_y = sense_y;
+  particle.associations = associations;
+  particle.sense_x = sense_x;
+  particle.sense_y = sense_y;
 }
 
-string ParticleFilter::getAssociations(Particle best)
-{
-	vector<int> v = best.associations;
-	stringstream ss;
-    copy( v.begin(), v.end(), ostream_iterator<int>(ss, " "));
-    string s = ss.str();
-    s = s.substr(0, s.length()-1);  // get rid of the trailing space
-    return s;
+string ParticleFilter::getAssociations(Particle best) {
+  vector<int> v = best.associations;
+  stringstream ss;
+  copy(v.begin(), v.end(), ostream_iterator<int>(ss, " "));
+  string s = ss.str();
+  s = s.substr(0, s.length() - 1);  // get rid of the trailing space
+  return s;
 }
-string ParticleFilter::getSenseX(Particle best)
-{
-	vector<double> v = best.sense_x;
-	stringstream ss;
-    copy( v.begin(), v.end(), ostream_iterator<float>(ss, " "));
-    string s = ss.str();
-    s = s.substr(0, s.length()-1);  // get rid of the trailing space
-    return s;
+string ParticleFilter::getSenseX(Particle best) {
+  vector<double> v = best.sense_x;
+  stringstream ss;
+  copy(v.begin(), v.end(), ostream_iterator<float>(ss, " "));
+  string s = ss.str();
+  s = s.substr(0, s.length() - 1);  // get rid of the trailing space
+  return s;
 }
-string ParticleFilter::getSenseY(Particle best)
-{
-	vector<double> v = best.sense_y;
-	stringstream ss;
-    copy( v.begin(), v.end(), ostream_iterator<float>(ss, " "));
-    string s = ss.str();
-    s = s.substr(0, s.length()-1);  // get rid of the trailing space
-    return s;
+string ParticleFilter::getSenseY(Particle best) {
+  vector<double> v = best.sense_y;
+  stringstream ss;
+  copy(v.begin(), v.end(), ostream_iterator<float>(ss, " "));
+  string s = ss.str();
+  s = s.substr(0, s.length() - 1);  // get rid of the trailing space
+  return s;
 }
