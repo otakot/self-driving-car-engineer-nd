@@ -129,6 +129,12 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
       }
     }
 
+    // if all landmarks are outside of sensor range we set the weight of particle as zero
+    if (predicted_landmarks.empty()) {
+      particle.weight = 0.0;
+      continue;
+    }
+
     // 2. translate observations coordinates from vehicle to map coordinate system
     vector<LandmarkObs> translated_observations;
 
@@ -188,7 +194,7 @@ void ParticleFilter::resample() {
     resampled_particles.push_back(particles_[particle_id]);
   }
 
-  particles_ = resampled_particles;
+  particles_ = std::move(resampled_particles);
 
   // reset weights
   weights_.clear();
