@@ -1,2 +1,2 @@
 # udacity.self-driving-car-nd
-My projects for Self Driving Car Engineer NanoDegree program
+these projects are part of autonomous driving system implementation in context of my Self Driving Car Engineer Nano Degree course
