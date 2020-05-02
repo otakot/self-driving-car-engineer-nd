@@ -3,3 +3,12 @@
 
 # Mac generated files
 .DS_Store
+
+# Ignored 08.particle-filter project resources
+08.particle-filter/reviewer
+08.particle-filter/submission_instructions.*
+08.particle-filter/build
+08.particle-filter/solution
+08.particle-filter/solution_data
+08.particle-filter/src/particle_filter_sol.cpp
+08.particle-filter/src/solutions
